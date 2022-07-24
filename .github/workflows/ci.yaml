@@ -13,9 +13,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        arch: [amd64]
 
     steps:
-      # - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       # - uses: docker/setup-qemu-action@v2
       # - uses: docker/setup-buildx-action@v2
@@ -29,18 +33,17 @@ jobs:
       #      ${{ runner.os }}-${{ matrix.component }}-buildx-
 
       - name: Build
+        env:
+          ARCH: ${{ matrix.arch }}
         run: |
+          chmod +x ./build.sh
           git clone -b current --single-branch https://github.com/vyos/vyos-build
-          cd vyos-build
-          docker run --rm -it --privileged -v $(pwd):/vyos -w /vyos vyos/vyos-build:current bash
-          os=buster64 branch=equuleus make build
-          ./configure --architecture amd64 --build-by "petter@hans.de"
-          make iso
+          docker run --rm --privileged -v $(pwd)/vyos-build:/vyos -v $(pwd)/build.sh:/build.sh -w /vyos vyos/vyos-build:current bash /build.sh
 
       - uses: actions/upload-artifact@v3
         with:
-          name: vyos
-          path: build/live-image-**.iso
+          name: vyos-iso-${{ matrix.arch }}
+          path: vyos-build/build/live-image-${{ matrix.arch }}.hybrid.iso
 
       #- name: Build
       #  uses: docker/build-push-action@v3
